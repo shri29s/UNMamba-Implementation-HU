@@ -1,0 +1,7 @@
+scipy
+torch
+numpy
+mambapy
+ipykernel
+matplotlib
+flask
