@@ -79,20 +79,20 @@ print(f"Reconstruction RMSE: {rec_rmse:.6f}")
 
 e_pred = E_np.squeeze().T  # (C, K)
 sad_per_em, mean_sad = sad(gt, e_pred)
-print(f"SAD (per endmember): {np.degrees(sad_per_em): .4f} deg")
-print(f"Mean SAD: {np.degrees(mean_sad): .4f} deg")
+print(f"SAD (per endmember): {np.round(np.degrees(sad_per_em), 4)} deg")
+print(f"Mean SAD: {np.round(np.degrees(mean_sad), 4)} deg")
 
 sid_per_em, mean_sid = sid(gt, e_pred)
-print(f"SID (per endmember): {sid_per_em: .6f}")
-print(f"Mean SID: {mean_sid: .6f}")
+print(f"SID (per endmember): {np.round(sid_per_em, 6)}")
+print(f"Mean SID: {np.round(mean_sid, 6)}")
 
 K, H, W = M_np.squeeze().shape # (K, H, W)
 a_pred_flat = M_np.squeeze().reshape(K, -1).T
 a_true_flat = a_true
 
 ab_rmse_per_em, mean_ab_rmse = abundance_rmse(a_true=a_true_flat, a_pred=a_pred_flat)
-print(f"Abundance RMSE (per endmember): {ab_rmse_per_em: .6f}")
-print(f"Mean Abundance RMSE: {mean_ab_rmse: .6f}")
+print(f"Abundance RMSE (per endmember): {np.round(ab_rmse_per_em, 6)}")
+print(f"Mean Abundance RMSE: {np.round(mean_ab_rmse, 6)}")
 
 metrics = {
     "rec_rmse": rec_rmse,
