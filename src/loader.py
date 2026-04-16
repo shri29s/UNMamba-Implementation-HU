@@ -3,6 +3,13 @@ import scipy.io as sio
 import torch
 import numpy as np
 
+"""
+Note:
+1. HSI tensor shape: (C, H, W)
+2. Ground-truth abundance (if available): (K, H, W)
+3. Ground-truth endmembers (if available): (K, C)
+"""
+
 class JRDataset(Dataset):
     def __init__(self, hsi_path, gt_path = None, normalize = True):
         data = sio.loadmat(hsi_path)
