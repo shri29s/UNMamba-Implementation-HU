@@ -18,6 +18,11 @@ loader = DataLoader(dataset, batch_size = 1, shuffle = False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+num_bands = dataset.hsi.shape[0]
+H = dataset.hsi.shape[1]
+W = dataset.hsi.shape[2]
+num_endmembers = dataset.gt_endmembers.shape[0] if dataset.gt_endmembers is not None else 4
+
 # check
 for batch in loader:
     print("HSI: ", batch["hsi"].shape)
@@ -31,7 +36,7 @@ history_data = {
     "E_history": []
 }
 
-model = UNMamba(num_bands=198, num_endmembers=4, H=100, W=100).to(device)
+model = UNMamba(num_bands=num_bands, num_endmembers=num_endmembers, H=H, W=W).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
 
 batch = next(iter(loader))
@@ -65,14 +70,14 @@ x_hat_np = to_np(x_hat)
 M_np = to_np(M)
 E_np = to_np(E)
 
-gt = dataset.gt_endmembers.T # Shape (C, K)
+gt = to_np(dataset.gt_endmembers).T  # (C, K)
 a_true = dataset.gt_abundance
-a_true = a_true.reshape(dataset.bands, -1) # Shape (K, H*W)
+a_true = to_np(a_true).reshape(num_endmembers, -1).T  # (N, K)
 
 rec_rmse = rmse(hsi, x_hat)
 print(f"Reconstruction RMSE: {rec_rmse:.6f}")
 
-e_pred = E_np.squeeze()
+e_pred = E_np.squeeze().T  # (C, K)
 sad_per_em, mean_sad = sad(gt, e_pred)
 print(f"SAD (per endmember): {np.degrees(sad_per_em).round(4)} deg")
 print(f"Mean SAD: {np.degrees(mean_sad).round(4)} deg")
@@ -83,7 +88,7 @@ print(f"Mean SID: {mean_sid.round(6)}")
 
 K, H, W = M_np.squeeze().shape # (K, H, W)
 a_pred_flat = M_np.squeeze().reshape(K, -1).T
-a_true_flat = a_true.T
+a_true_flat = a_true
 
 ab_rmse_per_em, mean_ab_rmse = abundance_rmse(a_true=a_true_flat, a_pred=a_pred_flat)
 print(f"Abundance RMSE (per endmember): {ab_rmse_per_em.round(6)}")

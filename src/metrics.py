@@ -15,6 +15,12 @@ def rmse(hsi, x_hat):
 # Endmember quality
 # Lower is better
 def sad(e_true, e_pred):
+    if e_true.shape != e_pred.shape:
+        if e_true.shape == e_pred.T.shape:
+            e_pred = e_pred.T
+        else:
+            raise ValueError(f"SAD shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
+
     C, K = e_true.shape
     cost = np.zeros((K, K))
 
@@ -32,6 +38,12 @@ def sad(e_true, e_pred):
 # SID: Spectral Information Divergence
 # Lower is better
 def sid(e_true, e_pred):
+    if e_true.shape != e_pred.shape:
+        if e_true.shape == e_pred.T.shape:
+            e_pred = e_pred.T
+        else:
+            raise ValueError(f"SID shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
+
     eps = 1e-10
     K = e_true.shape[1]
 
@@ -51,6 +63,12 @@ def sid(e_true, e_pred):
 
 # RMSE on Abundance maps
 def abundance_rmse(a_true, a_pred):
+    if a_true.shape != a_pred.shape:
+        if a_true.shape == a_pred.T.shape:
+            a_pred = a_pred.T
+        else:
+            raise ValueError(f"Abundance RMSE shape mismatch: a_true={a_true.shape}, a_pred={a_pred.shape}")
+
     K = a_true.shape[1]
     cost = np.zeros((K, K))
 

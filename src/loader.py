@@ -12,8 +12,19 @@ class JRDataset(Dataset):
         self.bands = int(data["nBand"].item())
         maxVal = float(data["maxValue"].item())
         
+        n_pixels = self.rows * self.cols
+
         Y = data["R"].astype(np.float32)
-        hsi = Y.reshape(-1, self.rows, self.cols)
+        if Y.shape == (self.bands, n_pixels):
+            Y_bc = Y
+        elif Y.shape == (n_pixels, self.bands):
+            Y_bc = Y.T
+        else:
+            raise ValueError(
+                f"Unexpected R shape {Y.shape}. Expected ({self.bands}, {n_pixels}) or ({n_pixels}, {self.bands})."
+            )
+
+        hsi = Y_bc.reshape(self.bands, self.rows, self.cols)
 
         if normalize:
             hsi /= maxVal
@@ -25,10 +36,32 @@ class JRDataset(Dataset):
         if gt_path is not None:
             gt = sio.loadmat(gt_path)
             A = gt["A"].astype(np.float32)
-            A = A.reshape(-1, self.rows, self.cols) # Shape = (198, 100, 100) (K, H, W)
+            if A.shape[1] == n_pixels:
+                A_kn = A
+            elif A.shape[0] == n_pixels:
+                A_kn = A.T
+            else:
+                raise ValueError(
+                    f"Unexpected A shape {A.shape}. Expected (K, {n_pixels}) or ({n_pixels}, K)."
+                )
+
+            num_endmembers = A_kn.shape[0]
+            A = A_kn.reshape(num_endmembers, self.rows, self.cols)  # (K, H, W)
 
             M = gt["M"].astype(np.float32)
-            M = M.T # Shape = (4, 198) (K, C)
+            if M.shape[0] == self.bands:
+                M = M.T
+            elif M.shape[1] == self.bands:
+                M = M
+            else:
+                raise ValueError(
+                    f"Unexpected M shape {M.shape}. Expected ({self.bands}, K) or (K, {self.bands})."
+                )
+
+            if M.shape[0] != num_endmembers:
+                raise ValueError(
+                    f"Endmember count mismatch between A ({num_endmembers}) and M ({M.shape[0]})."
+                )
 
             self.gt_abundance = torch.from_numpy(A)
             self.gt_endmembers = torch.from_numpy(M)
