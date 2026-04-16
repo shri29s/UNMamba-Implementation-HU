@@ -1,20 +1,22 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from .loader import JRDataset
-from .unmamba import UNMamba
-from .loss import unmixing_loss
+from loader import JRDataset
+from unmamba import UNMamba
+from loss import unmixing_loss
 
-from .utils import to_np
-from .metrics import rmse, sad, sid, abundance_rmse
+from utils import to_np
+from metrics import rmse, sad, sid, abundance_rmse
    
 dataset = JRDataset(
-    hsi_path = "../data/jasperRidge2_R198.mat",
-    gt_path = "../data/jasperRidge2_end4.mat",
+    hsi_path = "data/jasperRidge2_R198.mat",
+    gt_path = "data/jasperRidge2_end4.mat",
     normalize = True
 )
 
 loader = DataLoader(dataset, batch_size = 1, shuffle = False)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # check
 for batch in loader:
@@ -29,11 +31,11 @@ history_data = {
     "E_history": []
 }
 
-model = UNMamba(num_bands=198, num_endmembers=4, H=100, W=100).cuda()
+model = UNMamba(num_bands=198, num_endmembers=4, H=100, W=100).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
 
 batch = next(iter(loader))
-hsi = batch["hsi"].cuda()
+hsi = batch["hsi"].to(device)
 
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=45, gamma=0.5)
 
@@ -46,7 +48,7 @@ for epoch in range(800):
     scheduler.step()
 
     if (epoch + 1) % 15 == 0:
-        print(f"Epoch {epoch: 3d} | Loss {loss.item(): .5f}")
+        print(f"Epoch {epoch + 1: 3d} | Loss {loss.item(): .5f}")
 
         history_data["epochs"].append(epoch + 1)
         history_data["losses"].append(loss.item())

@@ -1,6 +1,6 @@
 from scipy.optimize import linear_sum_assignment
 import numpy as np
-from .utils import to_np
+from utils import to_np
 
 # RMSE: Root Mean Square Error
 # Reconstruction error, pixel-wise
