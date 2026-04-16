@@ -25,10 +25,10 @@ class JRDataset(Dataset):
         if gt_path is not None:
             gt = sio.loadmat(gt_path)
             A = gt["A"].astype(np.float32)
-            A = A.reshape(-1, self.rows, self.cols)
+            A = A.reshape(-1, self.rows, self.cols) # Shape = (198, 100, 100) (K, H, W)
 
             M = gt["M"].astype(np.float32)
-            M = M.T
+            M = M.T # Shape = (4, 198) (K, C)
 
             self.gt_abundance = torch.from_numpy(A)
             self.gt_endmembers = torch.from_numpy(M)
