@@ -47,15 +47,20 @@ def sid(e_true, e_pred):
     eps = 1e-10
     K = e_true.shape[1]
 
-    p = e_true / (e_true.sum(axis=0, keepdims=True) + eps)
-    q = e_pred / (e_pred.sum(axis=0, keepdims=True) + eps)
+    # SID requires valid probability-like spectra: nonnegative and normalized.
+    p = np.clip(e_true, a_min=0.0, a_max=None)
+    q = np.clip(e_pred, a_min=0.0, a_max=None)
+    p = p / (p.sum(axis=0, keepdims=True) + eps)
+    q = q / (q.sum(axis=0, keepdims=True) + eps)
+    p = np.clip(p, a_min=eps, a_max=None)
+    q = np.clip(q, a_min=eps, a_max=None)
 
     cost = np.zeros((K, K))
     for i in range(K):
         for j in range(K):
-            kl_pq = np.sum(p[:, i] * np.log((p[:, i] + eps) / q[:, j] + eps))
-            kl_qp = np.sum(q[:, j] * np.log((q[:, j] + eps) / (p[:, i] + eps)))
-            cost[i, j] = kl_pq + kl_qp
+            kl_pq = np.sum(p[:, i] * np.log(p[:, i] / q[:, j]))
+            kl_qp = np.sum(q[:, j] * np.log(q[:, j] / p[:, i]))
+            cost[i, j] = np.nan_to_num(kl_pq + kl_qp, nan=1e12, posinf=1e12, neginf=1e12)
 
     row_ind, col_ind = linear_sum_assignment(cost)
     sids = cost[row_ind, col_ind]
