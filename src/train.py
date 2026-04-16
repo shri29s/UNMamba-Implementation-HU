@@ -92,7 +92,7 @@ a_true_flat = a_true
 
 ab_rmse_per_em, mean_ab_rmse = abundance_rmse(a_true=a_true_flat, a_pred=a_pred_flat)
 print(f"Abundance RMSE (per endmember): {ab_rmse_per_em.round(6)}")
-print(f"Mean Abundance RMSE: {mean_ab_rmse.round(6)}")
+print(f"Mean Abundance RMSE: {mean_ab_rmse: .6f}")
 
 metrics = {
     "rec_rmse": rec_rmse,
