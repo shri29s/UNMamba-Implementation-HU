@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from loader import JRDataset
 from unmamba import UNMamba
 from loss import unmixing_loss
+import os
 
 from utils import to_np
 from metrics import rmse, sad, sid, abundance_rmse
@@ -42,13 +43,17 @@ optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
 batch = next(iter(loader))
 hsi = batch["hsi"].to(device)
 
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=45, gamma=0.5)
-
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=45, gamma=0.9)
+model.train()
 for epoch in range(800):
     optimizer.zero_grad()
     x_hat, M, E = model(hsi)
     loss = unmixing_loss(hsi, x_hat, E, M)
     loss.backward()
+
+    for p in model.query_embed.weight:
+        p.data.clamp
+
     optimizer.step()
     scheduler.step()
 
@@ -62,6 +67,7 @@ for epoch in range(800):
 
 # Evaluation metrics
 model.eval()
+torch.save(model.state_dict(), "model_JR.pth")
 with torch.no_grad():
     x_hat, M, E = model(hsi)
 
