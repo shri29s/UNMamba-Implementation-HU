@@ -12,7 +12,11 @@ def subplot_grid(n):
     return rows, cols
 
 def plot_results(results, dataset):
-    directory = os.path.join("results", dataset.name)
+    results_dir = "results"
+    os.makedirs(results_dir, exist_ok=True)
+    directory = os.path.join(results_dir, dataset.name)
+    os.makedirs(directory, exist_ok=True)
+    
     map: np.ndarray = results["M_history"][-1]
     map = map.squeeze()
 
