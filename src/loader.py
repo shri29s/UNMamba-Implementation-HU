@@ -15,7 +15,7 @@ class JRDataset(Dataset):
         data = sio.loadmat(hsi_path)
         
         self.name = "JR"
-        self.labels = np.array(["Road", "Soil", "Tree", "Water"])
+        self.labels = np.array(["Tree", "Water", "Soil", "Road"])
         self.rows = int(data["nRow"].item())
         self.cols = int(data["nCol"].item())
         self.bands = int(data["nBand"].item())

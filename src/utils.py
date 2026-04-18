@@ -1,10 +1,29 @@
 import matplotlib.pyplot as plt
+from scipy.optimize import linear_sum_assignment
 import numpy as np
 import math
 import os
 
 def to_np(t) -> np.ndarray:
     return t.detach().cpu().numpy().astype(np.float64)
+
+def get_permutation(e_true: np.ndarray, e_pred: np.ndarray) -> np.ndarray:
+    # Find the optimal permutation to align predicted endmembers to ground truth.
+    K = e_true.shape[0]
+    cost = np.zeros((K, K))
+
+    for i in range(K):
+        for j in range(K):
+            num = np.dot(e_true[i], e_pred[j])
+            denom = np.linalg.norm(e_true[i]) * np.linalg.norm(e_pred[j]) + 1e-10
+            cost[i, j] = np.arccos(np.clip(num / denom, -1, 1))
+
+    _, col_ind = linear_sum_assignment(cost)
+    return col_ind
+
+def apply_permutation(col_ind: np.ndarray, endmems: np.ndarray, abundances: np.ndarray):
+    # Reorder predicted endmembers and abundances to match ground truth order.
+    return endmems[col_ind], abundances[col_ind]
 
 def subplot_grid(n):
     cols = math.ceil(math.sqrt(n))
@@ -19,24 +38,27 @@ def plot_results(results, dataset):
     
     map: np.ndarray = results["M_history"][-1]
     map = map.squeeze()
-
     n_materials = len(map)
-    rows, cols = subplot_grid(n_materials)
 
+    endmems: np.ndarray = results["E_history"][-1]
+    n_endmems = len(endmems)
+
+    col_ind = get_permutation(dataset.gt_endmembers, endmems)
+    endmems, map = apply_permutation(col_ind, endmems, map)
+
+    # Plot abundance
+    rows, cols = subplot_grid(n_materials)
     plt.figure(figsize=(10, 10), dpi=150)
     for i in range(n_materials):
         plt.subplot(rows, cols, i + 1)
         plt.imshow(map[i], cmap="jet")
         plt.title(dataset.labels[i])
-    
     plt.tight_layout()
     plt.savefig(os.path.join(directory, "abundance.png"))
     plt.close()
 
-    endmems: np.ndarray = results["E_history"][-1]
-    n_endmems = len(endmems)
+    # Plot endmembers
     rows, cols = subplot_grid(n_endmems)
-
     plt.figure(figsize=(18, 9), dpi=150)
     for i in range(n_endmems):
         plt.subplot(rows, cols, i + 1)
@@ -46,11 +68,11 @@ def plot_results(results, dataset):
         plt.xlabel("Bands")
         plt.ylabel("Reflectance")
         plt.legend()
-    
     plt.tight_layout()
     plt.savefig(os.path.join(directory, "endmembers.png"))
     plt.close()
 
+    # Plot loss graph
     plt.figure(figsize=(8, 5), dpi=150)
     plt.plot(results["epochs"], results["losses"])
     plt.title("Loss vs Epoch")
