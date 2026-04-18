@@ -4,9 +4,8 @@ from torch.utils.data import DataLoader
 from loader import JRDataset
 from unmamba import UNMamba
 from loss import unmixing_loss
-import os
 
-from utils import to_np
+from utils import to_np, plot_results
 from metrics import rmse, sad, sid, abundance_rmse
    
 dataset = JRDataset(
@@ -115,3 +114,6 @@ metrics = {
 unmixing_results = {k: np.array(v) for k, v in history_data.items()}
 unmixing_results["metrics"] = metrics
 np.savez_compressed("unmixing_results.npz", **unmixing_results)
+
+directory = plot_results(results=unmixing_results, dataset=dataset)
+print(f"\nPlots saved in: {directory}")
