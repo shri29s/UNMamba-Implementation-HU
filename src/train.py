@@ -44,22 +44,24 @@ batch = next(iter(loader))
 hsi = batch["hsi"].to(device)
 
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=45, gamma=0.9)
+
+hsi_mean = hsi.mean(dim=(0, 2, 3))  # (L,) — precompute once outside loop
 model.train()
 for epoch in range(800):
     optimizer.zero_grad()
     x_hat, M, E = model(hsi)
-    loss = unmixing_loss(hsi, x_hat, E, M)
+    loss = unmixing_loss(hsi, x_hat, E, M, hsi_mean=hsi_mean, alpha=0.001, beta=1e-6)
     loss.backward()
 
-    for p in model.query_embed.weight:
-        p.data.clamp
+    with torch.no_grad():
+        for p in model.endmember_module.query_embed.weight:
+            p.data.clamp_(1e-7, 1.0)   # ← was missing () before
 
     optimizer.step()
     scheduler.step()
 
     if (epoch + 1) % 15 == 0:
-        print(f"Epoch {epoch + 1: 3d} | Loss {loss.item(): .5f}")
-
+        print(f"Epoch {epoch+1:3d} | Loss {loss.item():.5f}")
         history_data["epochs"].append(epoch + 1)
         history_data["losses"].append(loss.item())
         history_data["M_history"].append(M.detach().cpu().numpy())
