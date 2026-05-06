@@ -25,6 +25,17 @@ def apply_permutation(col_ind: np.ndarray, endmems: np.ndarray, abundances: np.n
     # Reorder predicted endmembers and abundances to match ground truth order.
     return endmems[col_ind], abundances[col_ind]
 
+def _as_endmember_matrix(endmembers: np.ndarray) -> np.ndarray:
+    endmembers = np.asarray(endmembers)
+    if endmembers.ndim != 2:
+        raise ValueError(f"Expected a 2D endmember matrix, got shape {endmembers.shape}")
+
+    # Accept either (K, C) or (C, K) and normalize to (K, C).
+    if endmembers.shape[0] > endmembers.shape[1]:
+        endmembers = endmembers.T
+
+    return endmembers
+
 def subplot_grid(n):
     cols = math.ceil(math.sqrt(n))
     rows = math.ceil(n / cols)
@@ -36,41 +47,62 @@ def plot_results(results, dataset):
     directory = os.path.join(results_dir, dataset.name)
     os.makedirs(directory, exist_ok=True)
     
-    map: np.ndarray = results["M_history"][-1]
-    map = map.squeeze()
-    n_materials = len(map)
+    labels = dataset.labels if getattr(dataset, "labels", None) is not None else None
+    has_gt_abundance = getattr(dataset, "gt_abundance", None) is not None
+    has_gt_endmembers = getattr(dataset, "gt_endmembers", None) is not None
 
-    endmems: np.ndarray = results["E_history"][-1]
-    n_endmems = len(endmems)
+    abundance_map = results.get("final_M")
+    if abundance_map is None or np.asarray(abundance_map).size == 0:
+        if len(results.get("M_history", [])) == 0:
+            raise ValueError("No abundance map available for plotting.")
+        abundance_map = results["M_history"][-1]
+    abundance_map = np.asarray(abundance_map).squeeze()
 
-    col_ind = get_permutation(dataset.gt_endmembers, endmems)
-    endmems, map = apply_permutation(col_ind, endmems, map)
+    if has_gt_endmembers:
+        gt_endmembers = _as_endmember_matrix(dataset.gt_endmembers)
+        endmems = results.get("final_E")
+        if endmems is None or np.asarray(endmems).size == 0:
+            if len(results.get("E_history", [])) == 0:
+                raise ValueError("No endmember matrix available for plotting.")
+            endmems = results["E_history"][-1]
+        endmems = _as_endmember_matrix(endmems)
+        col_ind = get_permutation(gt_endmembers, endmems)
+        abundance_map = abundance_map[col_ind]
+
+    n_materials = len(abundance_map)
+    abundance_labels = labels if labels is not None else [f"Component {i + 1}" for i in range(n_materials)]
 
     # Plot abundance
     rows, cols = subplot_grid(n_materials)
     plt.figure(figsize=(10, 10), dpi=150)
     for i in range(n_materials):
         plt.subplot(rows, cols, i + 1)
-        plt.imshow(map[i], cmap="jet")
-        plt.title(dataset.labels[i])
+        plt.imshow(abundance_map[i], cmap="jet")
+        plt.title(abundance_labels[i])
     plt.tight_layout()
     plt.savefig(os.path.join(directory, "abundance.png"))
     plt.close()
 
-    # Plot endmembers
-    rows, cols = subplot_grid(n_endmems)
-    plt.figure(figsize=(18, 9), dpi=150)
-    for i in range(n_endmems):
-        plt.subplot(rows, cols, i + 1)
-        plt.plot(endmems[i], color="blue", label="UNMamba")
-        plt.plot(dataset.gt_endmembers[i], color="orange", linestyle="dashed", label="GT")
-        plt.title(dataset.labels[i])
-        plt.xlabel("Bands")
-        plt.ylabel("Reflectance")
-        plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(directory, "endmembers.png"))
-    plt.close()
+    if has_gt_endmembers:
+        n_endmems = len(endmems)
+        endmember_labels = labels if labels is not None else [f"Endmember {i + 1}" for i in range(n_endmems)]
+
+        endmems, _ = apply_permutation(col_ind, endmems, abundance_map)
+
+        # Plot endmembers
+        rows, cols = subplot_grid(n_endmems)
+        plt.figure(figsize=(18, 9), dpi=150)
+        for i in range(n_endmems):
+            plt.subplot(rows, cols, i + 1)
+            plt.plot(endmems[i], color="blue", label="UNMamba")
+            plt.plot(gt_endmembers[i], color="orange", linestyle="dashed", label="GT")
+            plt.title(endmember_labels[i])
+            plt.xlabel("Bands")
+            plt.ylabel("Reflectance")
+            plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(directory, "endmembers.png"))
+        plt.close()
 
     # Plot loss graph
     plt.figure(figsize=(8, 5), dpi=150)

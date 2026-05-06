@@ -2,6 +2,17 @@ from scipy.optimize import linear_sum_assignment
 import numpy as np
 from utils import to_np
 
+def _as_endmember_matrix(x: np.ndarray) -> np.ndarray:
+    x = np.asarray(x)
+    if x.ndim != 2:
+        raise ValueError(f"Expected a 2D endmember matrix, got shape {x.shape}")
+
+    # Normalize to (K, C): one row per endmember, one column per spectral band.
+    if x.shape[0] > x.shape[1]:
+        x = x.T
+
+    return x
+
 # RMSE: Root Mean Square Error
 # Reconstruction error, pixel-wise
 # Lower is better
@@ -15,19 +26,19 @@ def rmse(hsi, x_hat):
 # Endmember quality
 # Lower is better
 def sad(e_true, e_pred):
-    if e_true.shape != e_pred.shape:
-        if e_true.shape == e_pred.T.shape:
-            e_pred = e_pred.T
-        else:
-            raise ValueError(f"SAD shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
+    e_true = _as_endmember_matrix(e_true)
+    e_pred = _as_endmember_matrix(e_pred)
 
-    C, K = e_true.shape
+    if e_true.shape != e_pred.shape:
+        raise ValueError(f"SAD shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
+
+    K, C = e_true.shape
     cost = np.zeros((K, K))
 
     for i in range(K):
         for j in range(K):
-            num = np.dot(e_true[:, i], e_pred[:, j])
-            denom = (np.linalg.norm(e_true[:, i]) * np.linalg.norm(e_pred[:, j]) + 1e-10)
+            num = np.dot(e_true[i], e_pred[j])
+            denom = (np.linalg.norm(e_true[i]) * np.linalg.norm(e_pred[j]) + 1e-10)
             cost[i, j] = np.arccos(np.clip(num / denom, -1, 1))
 
 
@@ -38,20 +49,20 @@ def sad(e_true, e_pred):
 # SID: Spectral Information Divergence
 # Lower is better
 def sid(e_true, e_pred):
+    e_true = _as_endmember_matrix(e_true)
+    e_pred = _as_endmember_matrix(e_pred)
+
     if e_true.shape != e_pred.shape:
-        if e_true.shape == e_pred.T.shape:
-            e_pred = e_pred.T
-        else:
-            raise ValueError(f"SID shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
+        raise ValueError(f"SID shape mismatch: e_true={e_true.shape}, e_pred={e_pred.shape}")
 
     eps = 1e-10
-    K = e_true.shape[1]
+    K, C = e_true.shape
 
     # SID requires valid probability-like spectra: nonnegative and normalized.
     p = np.clip(e_true, a_min=0.0, a_max=None)
     q = np.clip(e_pred, a_min=0.0, a_max=None)
-    p = p / (p.sum(axis=0, keepdims=True) + eps)
-    q = q / (q.sum(axis=0, keepdims=True) + eps)
+    p = p / (p.sum(axis=1, keepdims=True) + eps)
+    q = q / (q.sum(axis=1, keepdims=True) + eps)
     p = np.clip(p, a_min=eps, a_max=None)
     q = np.clip(q, a_min=eps, a_max=None)
 

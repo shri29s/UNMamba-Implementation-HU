@@ -33,8 +33,8 @@ class SpatialBlock(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, C, H, W = x.shape
-        # Collapse batch+spatial into one long sequence (official behavior)
-        seq = x.permute(0, 2, 3, 1).contiguous().view(1, B * H * W, C)
+        # Treat each sample in the batch as an independent sequence of length H*W
+        seq = x.permute(0, 2, 3, 1).contiguous().view(B, H * W, C)
         out = self.mamba(seq)
         out = self.proj(out)
         out = out.view(B, H, W, C).permute(0, 3, 1, 2).contiguous()
@@ -48,8 +48,9 @@ class SpectralBlock(nn.Module):
     def __init__(self, channels: int, H: int, W: int, ds_factor: int = 4):
         super().__init__()
         self.ds = ds_factor
-        ds_h = max(1, H // ds_factor)
-        ds_w = max(1, W // ds_factor)
+        # use ceil to match padding in UNMamba.forward which pads to make H,W divisible by ds
+        ds_h = max(1, math.ceil(H / ds_factor))
+        ds_w = max(1, math.ceil(W / ds_factor))
         d_model = ds_h * ds_w  # spatial positions are the model dim
 
         cfg = MambaConfig(d_model=d_model, n_layers=1)
@@ -59,7 +60,7 @@ class SpectralBlock(nn.Module):
             nn.LayerNorm(d_model),
             nn.SiLU(),
         )
-        self.up = nn.Upsample(size=(H, W), mode="bilinear", align_corners=False)
+        # upsampling will be done to match the runtime input size (may be padded)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, C, H, W = x.shape
@@ -73,7 +74,8 @@ class SpectralBlock(nn.Module):
         out = self.mamba(seq)                             # (B, C, sh*sw)
         out = self.proj(out)                              # (B, C, sh*sw)
         out = out.view(B, C, sh, sw)
-        out = self.up(out)                                # (B, C, H, W)
+        # upsample to the runtime spatial size (handles padding done in UNMamba.forward)
+        out = F.interpolate(out, size=(H, W), mode="bilinear", align_corners=False)
         return out + x
 
 
