@@ -87,7 +87,7 @@ class ChandrayaanDataset(Dataset):
         self.rows = int(data["H"].item()) if "H" in data else 2995
         self.cols = int(data["W"].item()) if "W" in data else 304
         self.bands = int(data["C"].item()) if "C" in data else 85
-        self.num_endmembers = int(data["P"].item()) if "P" in data else 8
+        self.num_endmembers = int(data["P"].item()) if "P" in data else 4
 
         maxVal = float(data["Y"].max())
         hsi = data["Y"].astype(np.float32)
