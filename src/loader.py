@@ -89,8 +89,8 @@ class ChandrayaanDataset(Dataset):
         self.bands = int(data["C"].item()) if "C" in data else 85
         self.num_endmembers = int(data["P"].item()) if "P" in data else 8
 
-        maxVal = float(data["X"].max())
-        hsi = data["X"].astype(np.float32)
+        maxVal = float(data["Y"].max())
+        hsi = data["Y"].astype(np.float32)
         if hsi.shape[0] != self.bands or hsi.shape[1] != self.rows or hsi.shape[2] != self.cols:
             raise ValueError(f"Expected HSI shape ({self.bands}, {self.rows}, {self.cols}), but got {hsi.shape}")
 
