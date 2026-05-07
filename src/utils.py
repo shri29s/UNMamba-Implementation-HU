@@ -58,16 +58,19 @@ def plot_results(results, dataset):
         abundance_map = results["M_history"][-1]
     abundance_map = np.asarray(abundance_map).squeeze()
 
+    endmems = results.get("final_E")
+    if endmems is None or np.asarray(endmems).size == 0:
+        endmems = results["E_history"][-1] if len(results.get("E_history", [])) > 0 else None
+
     if has_gt_endmembers:
         gt_endmembers = _as_endmember_matrix(dataset.gt_endmembers)
-        endmems = results.get("final_E")
-        if endmems is None or np.asarray(endmems).size == 0:
-            if len(results.get("E_history", [])) == 0:
-                raise ValueError("No endmember matrix available for plotting.")
-            endmems = results["E_history"][-1]
+        if endmems is None:
+            raise ValueError("No endmember matrix available for plotting.")
         endmems = _as_endmember_matrix(endmems)
         col_ind = get_permutation(gt_endmembers, endmems)
         abundance_map = abundance_map[col_ind]
+    elif endmems is not None:
+        endmems = _as_endmember_matrix(endmems)
 
     n_materials = len(abundance_map)
     abundance_labels = labels if labels is not None else [f"Component {i + 1}" for i in range(n_materials)]
@@ -83,11 +86,12 @@ def plot_results(results, dataset):
     plt.savefig(os.path.join(directory, "abundance.png"))
     plt.close()
 
-    if has_gt_endmembers:
+    if endmems is not None:
         n_endmems = len(endmems)
         endmember_labels = labels if labels is not None else [f"Endmember {i + 1}" for i in range(n_endmems)]
 
-        endmems, _ = apply_permutation(col_ind, endmems, abundance_map)
+        if has_gt_endmembers:
+            endmems, _ = apply_permutation(col_ind, endmems, abundance_map)
 
         # Plot endmembers
         rows, cols = subplot_grid(n_endmems)
@@ -95,7 +99,8 @@ def plot_results(results, dataset):
         for i in range(n_endmems):
             plt.subplot(rows, cols, i + 1)
             plt.plot(endmems[i], color="blue", label="UNMamba")
-            plt.plot(gt_endmembers[i], color="orange", linestyle="dashed", label="GT")
+            if has_gt_endmembers:
+                plt.plot(gt_endmembers[i], color="orange", linestyle="dashed", label="GT")
             plt.title(endmember_labels[i])
             plt.xlabel("Bands")
             plt.ylabel("Reflectance")
