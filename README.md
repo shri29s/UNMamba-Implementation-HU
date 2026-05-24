@@ -182,8 +182,9 @@ If you use this implementation, please cite the original paper:
 D. Chen, J. Zhang and J. Li, "UNMamba: Cascaded Spatial–Spectral Mamba for Blind Hyperspectral Unmixing,"
 in IEEE Geoscience and Remote Sensing Letters, vol. 22, pp. 1-5, 2025, Art no. 5502405,
 doi: 10.1109/LGRS.2025.3545505.
-keywords: {Computational modeling;Feature extraction;Estimation;Transformers;Hyperspectral imaging;
-Training;Random sequences;Geoscience and remote sensing;Decoding;Data mining;Blind hyperspectral unmixing (HU);
+keywords: {Computational modeling;Feature extraction;Estimation;Transformers;
+Hyperspectral imaging; Training;Random sequences;Geoscience and remote sensing;
+Decoding;Data mining;Blind hyperspectral unmixing (HU);
 endmember loss;linear mixing model (LMM);Mamba;state-space model},
 ```
 
