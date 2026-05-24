@@ -4,3 +4,8 @@ numpy
 mambapy
 ipykernel
 matplotlib
+
+pandas
+h5py
+pyarrow
+msgpack
